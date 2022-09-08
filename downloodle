@@ -80,6 +80,7 @@ scrape() {
   regex1='(?<=<option  value=")[0-9]+(?=")'
   regex2='(?<=" >).+(?=</option>)'
   regex3='(?<=<a class="aalink" href=")https:\/\/moodle2223\.centralelille\.fr\/course\/view\.php\?id=[0-9]+(?=">)'
+  regex4='class="aalink" href="https:\/\/moodle2223\.centralelille\.fr\/course\/view\.php\?id=[0-9]+">\K[^<]+'
   regex5='https:\/\/moodle2223\.centralelille\.fr\/mod\/resource\/view\.php\?id=[0-9]+(?=">)'
   regex6='(?<=<span class="instancename">)[^<]+(?=<span class="accesshide " > Fichier)'
   page=$(curl -s 'https://moodle2223.centralelille.fr/course/index.php?categoryid=2' -H "Cookie: MoodleSession=$cookie" | sed 's:selected::g')
@@ -99,8 +100,7 @@ scrape() {
     fi
     page=$(curl -s "$link" -H "Cookie: MoodleSession=$cookie")
     readarray -t linkUrls <<< $(grep -Po "$regex3" <<< "$page")
-    readarray -t linkNames <<< $(sed -E 's:<|>:\n:g' <<< "$page" | sed -n '/aalink/{n;p;}')
-
+    readarray -t linkNames <<< $(grep -Po "$regex4" <<< "$page")
     for ((j=0; j < "${#linkUrls[j]}"; j++)); do
       echo -e "\e[33m  > ${linkNames[j]}\e[0m"
       if [[ "$2" == 'links' ]]; then
