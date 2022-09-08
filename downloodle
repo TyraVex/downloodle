@@ -1,0 +1,129 @@
+#!/bin/bash
+
+logo() {
+
+  unset blank
+  for ((i=44; i < "$COLUMNS"-1; i+=2)); do blank+=' '; done
+  echo
+  echo "$blank     __                __             ____"
+  echo "$blank ___/ /__ _    _____  / /__  ___  ___/ / /__"
+  echo "$blank/ _  / _ \ |/|/ / _ \/ / _ \/ _ \/ _  / / -_)"
+  echo "$blank\_,_/\___/__,__/_//_/_/\___/\___/\_,_/_/\__/"
+  echo "$blank                                 By TyraVex"
+  echo
+
+}
+
+editCookie() {
+
+  unset cookie
+  echo -e "\e[33m\nGet the cookie value here : \e[34mhttps://moodle2223.centralelille.fr"
+  echo -e "\e[33mEnter dev tools (F12) -> Network tab -> Reload the page -> Select the first request -> Cookie tab\e[0m\n"
+  read -p 'Cookie : ' cookie
+  if [[ -z "$cookie" ]]; then
+    menu 'error' 'Empty input'
+  else
+    echo "$cookie" > .cookie
+    menu 'success' 'Cookie was edited'
+  fi
+
+}
+
+menu() {
+
+  clear
+  if (( "$COLUMNS" > 45 )); then
+    logo
+  else
+    echo
+  fi
+  case "$1" in
+    error) echo -e "\e[31mERROR : $2\e[0m\n";;
+    success) echo -e "\e[32mSUCCESS : $2\e[0m\n";;
+  esac
+  unset dashes
+  for ((i=11; i < "$COLUMNS"-1; i+=2)); do dashes+='-'; done
+  echo -e "\e[34m$dashes MAIN MENU $dashes\e[0m"
+  if [[ "$2" == 'No cookie found' || "$2" == 'Cookie is invalid or expired' ]]; then
+    editCookie
+  fi
+  cookie="$(cat .cookie 2>/dev/null)"
+  if [[ -z "$cookie" ]]; then
+    menu 'error' 'No cookie found'
+    exit
+  elif [[ "$cookie" == invalid ]]; then
+    menu 'error' 'Cookie is invalid or expired'
+    exit
+  else
+    if [[ "$1" == '--links' ]]; then
+      scrape "$cookie" 'links'
+    else
+      scrape "$cookie"
+    fi
+  fi
+
+}
+
+scrape() {
+
+  clear
+  if (( "$COLUMNS" > 45 )); then
+    logo
+  else
+    echo
+  fi
+  unset dashes
+  for ((i=9; i < "$COLUMNS"-1; i+=2)); do dashes+='-'; done
+  echo -e "\e[34m$dashes SCRAPER $dashes\e[0m"
+
+  cookie="$1"
+  regex1='(?<=<option  value=")[0-9]+(?=")'
+  regex2='(?<=" >).+(?=</option>)'
+  regex3='(?<=<a class="aalink" href=")https:\/\/moodle2223\.centralelille\.fr\/course\/view\.php\?id=[0-9]+(?=">)'
+  regex5='https:\/\/moodle2223\.centralelille\.fr\/mod\/resource\/view\.php\?id=[0-9]+(?=">)'
+  regex6='(?<=<span class="instancename">)[^<]+(?=<span class="accesshide " > Fichier)'
+  page=$(curl -s 'https://moodle2223.centralelille.fr/course/index.php?categoryid=2' -H "Cookie: MoodleSession=$cookie" | sed 's:selected::g')
+  [ -z "$page" ] && menu 'error' 'Network error' && exit
+  if [[ "$page" =~ '<h1>Redirection</h1>' ]]; then echo "invalid" > .cookie; menu 'error' 'Cookie is invalid or expired'; exit; fi
+  readarray -t optionIds <<< $(grep -Po "$regex1" <<< "$page")
+  readarray -t optionNames <<< $(grep -Po "$regex2" <<< "$page")
+  echo
+
+  for ((i=0; i < "${#optionIds[@]}"; i++)); do
+
+    if [[ "${optionNames[i+1]}" =~ "${optionNames[i]} / " || ! "${optionNames[i]}" =~ 'IG2I (Sous statut Etudiant)' ]]; then continue; fi
+    link="https://moodle2223.centralelille.fr/course/index.php?categoryid=${optionIds[i]}"
+    echo -e "${optionNames[i]}"
+    if [[ "$2" == 'links' ]]; then
+      echo -e "\e[34m$link\e[0m"
+    fi
+    page=$(curl -s "$link" -H "Cookie: MoodleSession=$cookie")
+    readarray -t linkUrls <<< $(grep -Po "$regex3" <<< "$page")
+    readarray -t linkNames <<< $(sed -E 's:<|>:\n:g' <<< "$page" | sed -n '/aalink/{n;p;}')
+
+    for ((j=0; j < "${#linkUrls[j]}"; j++)); do
+      echo -e "\e[33m  > ${linkNames[j]}\e[0m"
+      if [[ "$2" == 'links' ]]; then
+        echo -e "\e[34m    ${linkUrls[j]}\e[0m"
+      fi
+      page=$(curl -s "${linkUrls[j]}" -H "Cookie: MoodleSession=$cookie")
+      readarray -t fileUrls <<< $(grep -Po "$regex5" <<< "$page")
+      readarray -t fileNames <<< $(grep -Po "$regex6" <<< "$page")
+      for ((k=0; k < "${#fileUrls[@]}"; k++)); do
+        if [[ -n "${fileUrls[k]}" ]]; then
+          echo -e "\e[32m    > Downloading ${fileNames[k]}\e[0m"
+          if [[ "$2" == 'links' ]]; then
+            echo -e "\e[34m      ${fileUrls[k]}\e[0m"
+          fi
+        else
+          echo -e "\e[31m    > Nothing found here\e[0m"
+        fi
+      done
+    done
+    echo
+
+  done
+
+}
+
+menu
