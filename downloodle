@@ -55,7 +55,7 @@ menu() {
     menu 'error' 'Cookie is invalid or expired'
     exit
   else
-    if [[ "$1" == '--links' ]]; then
+    if [[ "$1" == '--links' || "$1" == '-l' ]]; then
       scrape "$cookie" 'links'
     else
       scrape "$cookie"
@@ -126,4 +126,4 @@ scrape() {
 
 }
 
-menu
+menu "$1"
