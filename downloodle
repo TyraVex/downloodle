@@ -81,8 +81,9 @@ scrape() {
   regex2='(?<=" >).+(?=</option>)'
   regex3='(?<=<a class="aalink" href=")https:\/\/moodle2223\.centralelille\.fr\/course\/view\.php\?id=[0-9]+(?=">)'
   regex4='class="aalink" href="https:\/\/moodle2223\.centralelille\.fr\/course\/view\.php\?id=[0-9]+">\K[^<]+'
-  regex5='https:\/\/moodle2223\.centralelille\.fr\/mod\/resource\/view\.php\?id=[0-9]+(?=">)'
-  regex6='(?<=<span class="instancename">)[^<]+(?=<span class="accesshide " > Fichier)'
+  regex5='https:\/\/moodle2223\.centralelille\.fr\/mod\/resource\/view\.php\?id=[0-9]+(?=">.{0,300}<span class="instancename">[^<]+)'
+  regex6='https:\/\/moodle2223\.centralelille\.fr\/mod\/resource\/view\.php\?id=[0-9]+">.{0,300}<span class="instancename">\K[^<]+'
+  regex7='https:\/\/moodle2223\.centralelille\.fr\/pluginfile\.php/[0-9]+/mod_resource/content/[^"]+'
   page=$(curl -s 'https://moodle2223.centralelille.fr/course/index.php?categoryid=2' -H "Cookie: MoodleSession=$cookie" | sed 's:selected::g')
   [ -z "$page" ] && menu 'error' 'Network error' && exit
   if [[ "$page" =~ '<h1>Redirection</h1>' ]]; then echo "invalid" > .cookie; menu 'error' 'Cookie is invalid or expired'; exit; fi
@@ -101,19 +102,39 @@ scrape() {
     page=$(curl -s "$link" -H "Cookie: MoodleSession=$cookie")
     readarray -t linkUrls <<< $(grep -Po "$regex3" <<< "$page")
     readarray -t linkNames <<< $(grep -Po "$regex4" <<< "$page")
-    for ((j=0; j < "${#linkUrls[j]}"; j++)); do
-      echo -e "\e[33m  > ${linkNames[j]}\e[0m"
+    if [[ "${#linkUrls[@]}" != "${#linkNames[@]}" ]]; then
+      echo -e "\e[31m  > ERROR : NUMBER OF LINK URLS AND NAMES ARE NOT MATCHING (URLS : ${#linkUrls[@]}, NAMES : ${#linkNames[@]})\e[0m"
+      echo -e "\e[31m  > PLEASE REPORT THIS ERROR HERE : https://github.com/TyraVex/downloodle/issues/new\e[0m"
+      echo "$page" > .debug
+      sleep 2
+    fi
+    for ((j=0; j < "${#linkUrls[@]}"; j++)); do
+      echo -e "\e[33m  > ${linkNames[j]//&amp;/&}\e[0m"
       if [[ "$2" == 'links' ]]; then
         echo -e "\e[34m    ${linkUrls[j]}\e[0m"
       fi
       page=$(curl -s "${linkUrls[j]}" -H "Cookie: MoodleSession=$cookie")
       readarray -t fileUrls <<< $(grep -Po "$regex5" <<< "$page")
       readarray -t fileNames <<< $(grep -Po "$regex6" <<< "$page")
+      if [[ "${#fileUrls[@]}" != "${#fileNames[@]}" ]]; then
+        echo -e "\e[31m    > ERROR : NUMBER OF FILE URLS AND NAMES ARE NOT MATCHING (URLS : ${#fileUrls[@]}, NAMES : ${#fileNames[@]})\e[0m"
+        echo -e "\e[31m    > PLEASE REPORT THIS ERROR HERE : https://github.com/TyraVex/downloodle/issues/new\e[0m"
+        echo "$page" > .debug
+        sleep 2
+      fi
       for ((k=0; k < "${#fileUrls[@]}"; k++)); do
         if [[ -n "${fileUrls[k]}" ]]; then
-          echo -e "\e[32m    > Downloading ${fileNames[k]}\e[0m"
+          echo -e "\e[32m    > Downloading ${fileNames[k]//&amp;/&}\e[0m"
+          finalUrl=$(curl -Ls -Io /dev/null -w %{url_effective} -H "Cookie: MoodleSession=$cookie" "${fileUrls[k]}")
+          if [[ "${finalUrl##*.}" =~ 'php?id=' ]]; then
+            finalUrl=$(curl -s "$finalUrl" -H "Cookie: MoodleSession=$cookie" | grep -Po "$regex7")
+          fi
+          path="${optionNames[i]// \/ /\/}/${linkNames[j]// \/ /\/}"
+          fileName="${fileNames[k]//\//-}.${finalUrl##*.}"
+          mkdir -p "$path"
+          curl -sL "$finalUrl" -H "Cookie: MoodleSession=$cookie" > "${path}/${fileName}"
           if [[ "$2" == 'links' ]]; then
-            echo -e "\e[34m      ${fileUrls[k]}\e[0m"
+            echo -e "\e[34m      $finalUrl\e[0m"
           fi
         else
           echo -e "\e[31m    > Nothing found here\e[0m"
