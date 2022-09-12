@@ -1,30 +1,30 @@
 #Introduction
-
-Hello !
-
-This script is able to scrape the Centrale Lille Moddle website
-All it needs is a valid 'ModdleSession' Cookie from an legitimate Moddle account
-And even if a user have authorized access, all the files aren't available to download (An IG2I studient can't download some ITEEM files for example)
-
-By default, this script will download 'IG2I (Sous statut Etudiant)' files. To modify this setting, you need to edit the code :
-`if [[ "${optionNames[i+1]}" =~ "${optionNames[i]} / " || ! "${optionNames[i]}" =~ 'IG2I (Sous statut Etudiant)' ]]; then continue; fi`
-                                                                                                 ^
-                                                                                          edit this value
-
+<br>
+Hello !<br>
+<br>
+This script is able to scrape the Centrale Lille Moddle website<br>
+All it needs is a valid 'ModdleSession' Cookie from an legitimate Moddle account<br>
+And even if a user have authorized access, all the files aren't available to download (An IG2I studient can't download some ITEEM files for example)<br>
+<br>
+By default, this script will download 'IG2I (Sous statut Etudiant)' files. To modify this setting, you need to edit the code :<br>
+`if [[ "${optionNames[i+1]}" =~ "${optionNames[i]} / " || ! "${optionNames[i]}" =~ 'IG2I (Sous statut Etudiant)' ]]; then continue; fi`<br>
+                                                                                                 ^<br>
+                                                                                          edit this value<br>
+<br>
 #To fix :
-
-  1 - Replace '%20' and '&amp;' with ' ' and 'et'
-  2 - Fix '.zip?forcedownload=1' and '.tar.gz?forcedownload=1' with '.zip' and '.tar.gz'
-  3 - Support double point extentions and files without extentions
-  4 - Fix regex for download link
-
+<br>
+  1 - Replace '%20' and '&amp;' with ' ' and 'et'<br>
+  2 - Fix '.zip?forcedownload=1' and '.tar.gz?forcedownload=1' with '.zip' and '.tar.gz'<br>
+  3 - Support double point extentions and files without extentions<br>
+  4 - Fix regex for download link<br>
+<br>
 #To do :
-
-  1 - Multithreading
-  2 - Better download UI
-  3 - Auto decompress
-  4 - School selection
-
+<br>
+  1 - Multithreading<br>
+  2 - Better download UI<br>
+  3 - Auto decompress<br>
+  4 - School selection<br>
+<br>
 #Error log (for devs)
 
 ```
