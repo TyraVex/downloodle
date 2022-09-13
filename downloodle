@@ -94,6 +94,7 @@ scrape() {
   for ((i=0; i < "${#optionIds[@]}"; i++)); do
 
     if [[ "${optionNames[i+1]}" =~ "${optionNames[i]} / " || ! "${optionNames[i]}" =~ 'IG2I (Sous statut Etudiant)' ]]; then continue; fi
+    if [[ ! "${optionNames[i]}" =~ "Génie Informatique 1" ]]; then continue; fi
     link="https://moodle2223.centralelille.fr/course/index.php?categoryid=${optionIds[i]}"
     echo -e "${optionNames[i]}"
     if [[ "$2" == 'links' ]]; then
@@ -129,8 +130,17 @@ scrape() {
           if [[ "${finalUrl##*.}" =~ 'php?id=' ]]; then
             finalUrl=$(curl -s "$finalUrl" -H "Cookie: MoodleSession=$cookie" | grep -Po "$regex7")
           fi
+          if [[ "${finalUrl##*.}" =~ '/mod_resource/content/' ]]; then
+            echo "    > No extention"
+            unset extention
+          else
+            extention=".${finalUrl##*.}"
+            extention="${extention//?forcedownload=1/}"
+          fi
           path="${optionNames[i]// \/ /\/}/${linkNames[j]// \/ /\/}"
-          fileName="${fileNames[k]//\//-}.${finalUrl##*.}"
+          fileName="${fileNames[k]//\//-}${extention}"
+          fileName="${fileName//&amp;/et}"
+          fileName="${fileName//&20;/ }"
           mkdir -p "$path"
           curl -sL "$finalUrl" -H "Cookie: MoodleSession=$cookie" > "${path}/${fileName}"
           if [[ "$2" == 'links' ]]; then
